@@ -10,15 +10,16 @@
 int main(int argc, char **argv){
     int port_n;
     char **file_path;
+
     //Check if the number of arguments is correct
     if(argc != 3){
         //Later change this to present a menu asking for destination n' stuff
         printf("Number of arguments incorrect.\n");
+    }else{
+        sscanf(argv[1], '%d', &port_n);  
+        sscanf(&argv[2], '%s', &file_path);
+        printf("%d %s\n", port_n, file_path);
     }
-
-    port_n = argv[1];
-    file_path = argv[2];
-
-
     return 0;
+
 }

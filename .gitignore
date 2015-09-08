@@ -32,3 +32,4 @@
 *.dSYM/
 
 stfp-config.json
+sftp-config.json
