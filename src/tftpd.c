@@ -11,11 +11,11 @@
 
 int main(int argc, char **argv){
     int port_n;
-    char *file_path;
+    char *folder, *file_path;
     int sockfd;
     struct sockaddr_in server, client;
     char message[512];
-    //int srcfd, destfd;
+    int fd;
 
     //Check if the number of arguments is correct
     if(argc != 3){
@@ -24,16 +24,18 @@ int main(int argc, char **argv){
         return 0;
     }else{
         //need to think on how to defend agains buffer overflow
-        file_path = malloc(sizeof(&argv[2][0]));
+        folder = malloc(sizeof(&argv[2][0]));
         if(!sscanf(&argv[1][0], "%d", &port_n)){
             printf("Argument 1 not an integer.\n");
             return 0;
         }
-        else if(!sscanf(&argv[2][0], "%s", file_path)){
+        else if(!sscanf(&argv[2][0], "%s", folder)){
             printf("Argument 2 not a string.\n");
             return 0;
         }
     }
+    printf("Port: %d, Folder: %s\n", port_n, folder);
+    fflush(stdout);
 
     /* Create and bind a UDP socket */
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
@@ -92,6 +94,18 @@ int main(int argc, char **argv){
                 printf("Received:\n%s\n", &message[1]);
                 fflush(stdout);
 
+                //Build the argument list for the file descriptor
+                file_path = malloc(sizeof(folder));
+                strcpy(file_path, folder);
+                strcat(file_path, "/");
+                strcat(file_path, &message[1]);
+                printf("file_path: %s\n", file_path);
+                fflush(stdout);
+
+                if((fd = open(file_path, O_RDONLY)) < 0){
+                    perror("open()");
+                    return -1;
+                }
                 
 
         } else {
