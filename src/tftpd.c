@@ -4,9 +4,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <fcntl.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <fcntl.h>
 
 int main(int argc, char **argv){
     int port_n;
@@ -49,14 +50,9 @@ int main(int argc, char **argv){
         perror("bind failed");
         return 0;
     }
-    fprintf(stdout, "Server is ready and listening on port %d\n", ntohs(server.sin_port));
+    printf("Server is ready and listening on port %d\n", ntohs(server.sin_port));
     fflush(stdout);
 
-    /*if((srcfd = open(file_path, O_RDONLY)) == -1){
-        perror("open failed");
-        return -1;
-    }*/
-    //if((destfd = open()))
     while(1){
         fd_set rfds;
         struct timeval tv;
@@ -93,8 +89,11 @@ int main(int argc, char **argv){
                    string. */
                 message[n] = '\0';
                 /* Print the message to stdout and flush. */
-                fprintf(stdout, "Received:\n%s\n", message);
+                printf("Received:\n%s\n", &message[1]);
                 fflush(stdout);
+
+                
+
         } else {
                 fprintf(stdout, "No message in five seconds.\n");
                 fflush(stdout);
