@@ -11,6 +11,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <math.h>
 
 int main(int argc, char **argv){
     int port_n;
@@ -92,7 +94,7 @@ int main(int argc, char **argv){
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
         } else if (retval > 0) {
-            ;
+
                 /* Data is available, receive it. */
                 assert(FD_ISSET(sockfd, &rfds));
                 
@@ -132,20 +134,42 @@ int main(int argc, char **argv){
                     perror("open()");
                     return -1;
                 }else{
+                    //check the size of the file and break it into packets
+                    fseek(fd, 0L, SEEK_END);
+                    int sz = ftell(fd);
+                    fseek(fd, 0L, SEEK_SET);
+                    
+                    char *packet[(int)ceil(sz/507)];
+
+                    printf("baby steps");
+                    fflush(stdout);
+
                     message[0] = 0;
                     message[1] = 3;
                     message[2] = 0;
                     message[3] = pc;
                     int n = 4;
                     char symbol = getc(fd);
-                    while((symbol = getc(fd)) != EOF && n < 511){
+                    while((symbol = getc(fd)) != EOF){
                         message[n] = symbol;
                         n++;
+                        if(n == 511){
+                            packet[pc - 1] = message;
+                            pc++;
+                            message[3] = pc;
+                            n = 4;
+                        }
                     }
+                    packet[pc - 1] = message;
+                    pc++;
                     /* Send the message back. */
-                    sendto(sockfd, message, (size_t) n, 0,
+                    int i;
+                    for(i = 0; i < pc - 1; i++){
+                        sendto(sockfd, packet[i], (size_t) n, 0,
                            (struct sockaddr *) &client,
                            (socklen_t) sizeof(client));
+                    }
+                    
                     if(fclose(fd) != 0){
                         perror("close()");
                     }
