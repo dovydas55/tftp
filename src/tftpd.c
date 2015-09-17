@@ -8,6 +8,8 @@
 #include <stdio.h>
 
 #include <fcntl.h>
+#include <dirent.h>
+#include <unistd.h>
 
 int main(int argc, char **argv){
     int port_n;
@@ -15,7 +17,9 @@ int main(int argc, char **argv){
     int sockfd;
     struct sockaddr_in server, client;
     char message[512];
-    int fd;
+    FILE *fd;
+    int pc = 1;
+    DIR *dir;
 
     //Check if the number of arguments is correct
     if(argc != 3){
@@ -36,6 +40,18 @@ int main(int argc, char **argv){
     }
     printf("Port: %d, Folder: %s\n", port_n, folder);
     fflush(stdout);
+
+    //check if directory is available to server
+    if(!(dir = opendir(folder))){
+        perror("opendir()");
+        return 0;
+    }else{
+        printf("Folder %s available.\n", folder);
+        fflush(stdout);
+        if(closedir(dir) != 0){
+            perror("closedir()");
+        }
+    }
 
     /* Create and bind a UDP socket */
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
@@ -70,6 +86,7 @@ int main(int argc, char **argv){
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
         } else if (retval > 0) {
+                 int x = 0;
                 /* Data is available, receive it. */
                 assert(FD_ISSET(sockfd, &rfds));
                 
@@ -82,32 +99,46 @@ int main(int argc, char **argv){
                                      sizeof(message) - 1, 0,
                                      (struct sockaddr *) &client,
                                      &len);
-                /* Send the message back. */
-                sendto(sockfd, message, (size_t) n, 0,
-                       (struct sockaddr *) &client,
-                       (socklen_t) sizeof(client));
-                /* Zero terminate the message, otherwise
+                 /* Zero terminate the message, otherwise
                    printf may access memory outside of the
                    string. */
                 message[n] = '\0';
                 /* Print the message to stdout and flush. */
-                printf("Received:\n%s\n", &message[1]);
+                printf("Received:\n%s\n", &message[2]);
                 fflush(stdout);
 
-                //Build the argument list for the file descriptor
-                file_path = malloc(sizeof(folder));
+                //Build file path argument string
+                file_path = malloc(strlen(folder));
                 strcpy(file_path, folder);
                 strcat(file_path, "/");
-                strcat(file_path, &message[1]);
-                printf("file_path: %s\n", file_path);
-                fflush(stdout);
-
-                if((fd = open(file_path, O_RDONLY)) < 0){
+                strcat(file_path, &message[2]);
+                //open file, pack into buffer and send
+                if((fd = fopen(file_path, "r")) == NULL){
                     perror("open()");
                     return -1;
+                }else{
+                    message[0] = 0;
+                    message[1] = 3;
+                    message[2] = 0;
+                    message[3] = pc;
+                    int n = 4;
+                    char symbol = getc(fd);
+                    while((symbol = getc(fd)) != EOF && n < 511){
+                        message[n] = symbol;
+                        n++;
+                    }
+                    /* Send the message back. */
+                    sendto(sockfd, message, (size_t) n, 0,
+                           (struct sockaddr *) &client,
+                           (socklen_t) sizeof(client));
+                    if(fclose(fd) != 0){
+                        perror("close()");
+                    }
+                    printf("YAAAAAYYYY!!!\n");
+                    fflush(stdout);
                 }
-                
 
+                
         } else {
                 fprintf(stdout, "No message in five seconds.\n");
                 fflush(stdout);
