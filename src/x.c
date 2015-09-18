@@ -19,16 +19,15 @@ void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 
 char file_path[1];
-struct sockaddr_in server, client;
 
 int main(int argc, char **argv){
-    int port_n, sockfd;
-    char *folder;
-    DIR *dir;
-    char message[512];
-    FILE *fd;
-    
-    //Check if the number of arguments is correct
+	int port_n, sockfd;
+	char *folder;
+	DIR *dir;
+	struct sockaddr_in server, client;
+	char message[512];
+	FILE *fd;
+	//Check if the number of arguments is correct
     if(argc != 3){
         //Later change this to present a menu asking for destination n' stuff
         printf("Number of arguments incorrect.\n");
@@ -48,7 +47,7 @@ int main(int argc, char **argv){
 
     //Check if directory is available to server
     checkDir(dir, folder);
-    /* Create and bind a UDP socket */
+   	/* Create and bind a UDP socket */
     if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){ /* SOCK_DGRAM  = using UDP */
         perror("cannot create socket");
         return 0;
@@ -69,7 +68,7 @@ int main(int argc, char **argv){
     printf("Server is ready and listening on port %d\n", ntohs(server.sin_port));
     fflush(stdout);
     while(1){
-        fd_set rfds;
+    	fd_set rfds;
         struct timeval tv;
         int retval;
 
@@ -114,16 +113,16 @@ int main(int argc, char **argv){
                 fflush(stdout);
 
                 /*Build file path argument string and
-                    open file
+					open file
                 */
-                buildPath(folder, message);
+				buildPath(folder, message);
                 if((fd = fopen(file_path, "r")) == NULL){
-                    perror("open()");
-                    return -1;
+                	perror("open()");
+                	return -1;
                 }else{
-                    printf("Yaaayyy!!!\n");
-                    fflush(stdout);
-                    exit(0);
+                	printf("Yaaayyy!!!\n");
+                	fflush(stdout);
+                	exit(0);
                 }
                 
              
@@ -132,11 +131,11 @@ int main(int argc, char **argv){
                 fflush(stdout);
         }
     }
-    return 0;
+	return 0;
 }
 
 void checkDir(DIR *dir, char *folder){
-    if(!(dir = opendir(folder))){
+	if(!(dir = opendir(folder))){
         perror("opendir()");
         exit(0);
     }else{
@@ -154,5 +153,5 @@ void buildPath(char *folder, char *message){
     strcat(file_path, "/");
     strcat(file_path, &message[2]);
     printf("file path: %s\n", file_path);
-    fflush(stdout);
+	fflush(stdout);
 }
