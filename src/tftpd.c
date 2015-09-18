@@ -118,8 +118,7 @@ int main(int argc, char **argv){
                         break; 
                     }
                 }
-                printf(">>>>>>>> %s\n", mode);
-                exit(0);
+                //printf(">>>>>>>> %s\n", mode);
                 //////////////////////////////////////////
 
 
@@ -129,7 +128,7 @@ int main(int argc, char **argv){
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
-                    if((fd = fopen(file_path, "rb")) == NULL){
+                    if((fd = fopen(file_path, "r")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
                         exit(0);
