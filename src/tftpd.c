@@ -107,13 +107,29 @@ int main(int argc, char **argv){
                    string. */
                 message[n] = '\0';
 
+                //////////////////////////////////////////
+                /************ extracting mode ***********/
+                //////////////////////////////////////////
+                int i;
+                char *mode;
+                for(i = 2; i < (int)sizeof(message); i++){
+                    if(message[i] == 0){
+                        mode = &message[i + 1];
+                        break; 
+                    }
+                }
+                printf(">>>>>>>> %s\n", mode);
+                exit(0);
+                //////////////////////////////////////////
+
+
                 //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
-                    if((fd = fopen(file_path, "r")) == NULL){
+                    if((fd = fopen(file_path, "rb")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
                         exit(0);
