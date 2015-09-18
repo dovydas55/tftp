@@ -14,12 +14,14 @@
 #include <stdlib.h>
 #include <math.h>
 
-//Check if directory is available to server
+//User defined helper functions
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 void error(int errorCode, const char *Errormsg, int sockfd);
 void sendPacket(int opCode, int blockNO, int sockfd, char *data);
+union { unsigned short blocknumber; char bytes[2]; } temp;
 
+//global variables
 char file_path[1];
 struct sockaddr_in server, client;
 
@@ -121,13 +123,15 @@ int main(int argc, char **argv){
                         OP = 0;
                         int packetNO = 1;
                         char data[512];
+
+                        //fill buffer from file, if not full = last message
                         while(fread(data, 1, 512, fd) == 512){
-                            printf("data: %s\n", &data[0]);
-                            fflush(stdout);
+                            
                             sendPacket(3, packetNO, sockfd, data);
+                            //implement a timeout function that waits 15 seconds for a reply
                             while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0 ){
                                 sendPacket(3, packetNO, sockfd, data);
-                                if(tries == 10){
+                                if(tries == 3){
                                     error(0, "Connection tiemout.", sockfd);
                                     break;
                                 }
@@ -135,13 +139,13 @@ int main(int argc, char **argv){
                             }
                             tries = 0;
                             
+                            //read reply message from client, if not awk then error
                             recvfrom(sockfd, message,
                                  sizeof(message) - 1, 0,
                                  (struct sockaddr *) &client,
                                  &len);
+
                             if(message[1] != 4){
-                                printf("OPcode: %d PacketNO: %d\n", message[1], message[3]);
-                                fflush(stdout);
                                 error(0, "Unexpected message recieved.", sockfd);
                                 break;
                             }
@@ -150,8 +154,16 @@ int main(int argc, char **argv){
                         }
                         printf("inside the void\n");
                             fflush(stdout);
+
                         sendPacket(3, packetNO, sockfd, message);
+                        //implement a timeout function to allow for 3 retires on sending the last packet
+                        while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0 ){
+                                sendPacket(3, packetNO, sockfd, data);
+                                tries++;
+                            }
+                        tries = 0;
                     } 
+
                 } else{
                     // reject request
                     error(0, "This operation is not supported!", sockfd);
@@ -212,10 +224,11 @@ void error(int errorCode, const char *errorMsg, int sockfd){
 void sendPacket(int opCode, int blockNO, int sockfd, char *data){
     int n = 4 + strlen(data);
     char msg[n];
+    temp.blocknumber = htons(blockNO);
     msg[0] = 0;
     msg[1] = opCode;
-    msg[2] = 0;
-    msg[3] = blockNO;
+    msg[2] = temp.bytes[0];
+    msg[3] = temp.bytes[1];
     int i;
     for(i = 4; i < n; i++){
         msg[i] = data[i - 4];
