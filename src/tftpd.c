@@ -28,7 +28,7 @@ struct sockaddr_in server, client;
 int main(int argc, char **argv){
     int port_n, sockfd;
     char *folder;
-    DIR *dir;
+    DIR *dir = NULL;
     char message[512];
     FILE *fd;
     
@@ -143,7 +143,13 @@ int main(int argc, char **argv){
                                 packetNO++;
                                 sz = fread(data, 1, 512, fd);
                             }
+                            if(sz < 512){
+                                char buf[sz];
+                                strncpy(buf, data, sz);
+                                sendPacket(3, packetNO, sockfd, buf);
+                            }
                         }while(sz > 0);
+                        //sendPacket(3, packetNO, sockfd, data);
                         shutdown(sockfd, SHUT_WR);
                         fclose(fd);
                         //close(sockfd);
