@@ -124,7 +124,14 @@ int main(int argc, char **argv){
 
                         sz = fread(data, 1, 512, fd);
                         do{
-                            sendPacket(3, packetNO, sockfd, data);
+                            if(sz < 512){
+                                char buf[sz];
+                                strncpy(buf, data, sz);
+                                sendPacket(3, packetNO, sockfd, buf);
+                            }else{
+                                sendPacket(3, packetNO, sockfd, data);    
+                            }
+                            
                             while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0){
                                 sendPacket(3, packetNO, sockfd, data);
                                 if(tries == 10){
@@ -133,6 +140,7 @@ int main(int argc, char **argv){
                                 }
                                 tries++;
                             }
+                            tries = 0; 
                             recvfrom(sockfd, message,
                                  sizeof(message) - 1, 0,
                                  (struct sockaddr *) &client,
@@ -143,11 +151,7 @@ int main(int argc, char **argv){
                                 packetNO++;
                                 sz = fread(data, 1, 512, fd);
                             }
-                            if(sz < 512){
-                                char buf[sz];
-                                strncpy(buf, data, sz);
-                                sendPacket(3, packetNO, sockfd, buf);
-                            }
+                            
                         }while(sz > 0);
                         //sendPacket(3, packetNO, sockfd, data);
                         shutdown(sockfd, SHUT_WR);
