@@ -17,6 +17,8 @@
 //Check if directory is available to server
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
+void error(int errorCode, const char *Errormsg, int sockfd);
+
 
 char file_path[1];
 struct sockaddr_in server, client;
@@ -103,6 +105,15 @@ int main(int argc, char **argv){
                    string. */
                 message[n] = '\0';
 
+                int OP = message[1];
+                if(OP == 1){
+                    //get request issued 
+                } else if(OP == 2){
+                    // put request issued
+                    error(2, "bla bla bla", sockfd);
+                }
+
+
                 /* Send the message back. */
                 sendto(sockfd, message, (size_t) n, 0,
                        (struct sockaddr *) &client,
@@ -156,3 +167,30 @@ void buildPath(char *folder, char *message){
     printf("file path: %s\n", file_path);
     fflush(stdout);
 }
+
+void error(int errorCode, const char *errorMsg, int sockfd){
+    int n = 16 + strlen(errorMsg);
+    char msg[n];
+    msg[0] = 0;
+    msg[1] = 5;
+    msg[2] = 0;
+    msg[3] = errorCode;
+    int i;
+    for(i = 4; i < n-1; i++){
+        msg[i] = errorMsg[i - 4];
+    }
+    msg[n] = '\0'; 
+
+
+    printf("%s\n", &msg[0]);
+    fflush(stdout);   
+        
+    sendto(sockfd, msg, (size_t) n, 0,
+                       (struct sockaddr *) &client,
+                       (socklen_t) sizeof(client));
+}
+
+
+
+
+
