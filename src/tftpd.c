@@ -110,7 +110,7 @@ int main(int argc, char **argv){
                     //get request issued 
                 } else if(OP == 2){
                     // put request issued
-                    error(2, "bla bla bla", sockfd);
+                    error(0, "This operation is unsupported!", sockfd);
                 }
 
 
