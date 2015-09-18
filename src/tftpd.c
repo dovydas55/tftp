@@ -18,7 +18,7 @@
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 void error(int errorCode, const char *Errormsg, int sockfd);
-
+void sendPacket(int opCode, int blockNO, int sockfd, char *data);
 
 char file_path[1];
 struct sockaddr_in server, client;
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
         FD_ZERO(&rfds);
         FD_SET(sockfd, &rfds);
 
-        /* Wait for five seconds. */
+        /* Set socket to wait for five seconds. */
         tv.tv_sec = 5;
         tv.tv_usec = 0;
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
@@ -105,39 +105,58 @@ int main(int argc, char **argv){
                    string. */
                 message[n] = '\0';
 
+                //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
-                    //get request issued 
-                } else if(OP == 2){
-                    // put request issued
-                    error(0, "This operation is unsupported!", sockfd);
-                }
-
-
-                /* Send the message back. */
-                sendto(sockfd, message, (size_t) n, 0,
-                       (struct sockaddr *) &client,
-                       (socklen_t) sizeof(client));
-               
-
-                /* Print the message to stdout and flush. */
-                printf("Received:\n%s\n", &message[2]);
-                fflush(stdout);
-
-                /*Build file path argument string and
-                    open file
-                */
-                buildPath(folder, message);
-                if((fd = fopen(file_path, "r")) == NULL){
-                    perror("open()");
-                    return -1;
-                }else{
-                    printf("Yaaayyy!!!\n");
+                    printf("into the void\n");
                     fflush(stdout);
-                    exit(0);
+                    /*Build file path argument string and
+                        open file*/
+                    buildPath(folder, message);
+                    if((fd = fopen(file_path, "r")) == NULL){
+                        error(0, "File not there.", sockfd);
+                        break;
+                    }else{
+                        int tries = 0;
+                        OP = 0;
+                        int packetNO = 1;
+                        char data[512];
+                        while(fread(data, 1, 512, fd) == 512){
+                            printf("data: %s\n", &data[0]);
+                            fflush(stdout);
+                            sendPacket(3, packetNO, sockfd, data);
+                            while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0 ){
+                                sendPacket(3, packetNO, sockfd, data);
+                                if(tries == 10){
+                                    error(0, "Connection tiemout.", sockfd);
+                                    break;
+                                }
+                                tries++;
+                            }
+                            tries = 0;
+                            
+                            recvfrom(sockfd, message,
+                                 sizeof(message) - 1, 0,
+                                 (struct sockaddr *) &client,
+                                 &len);
+                            if(message[1] != 4){
+                                printf("OPcode: %d PacketNO: %d\n", message[1], message[3]);
+                                fflush(stdout);
+                                error(0, "Unexpected message recieved.", sockfd);
+                                break;
+                            }
+                            OP = message[3];
+                            packetNO++;
+                        }
+                        printf("inside the void\n");
+                            fflush(stdout);
+                        sendPacket(3, packetNO, sockfd, message);
+                    } 
+                } else{
+                    // reject request
+                    error(0, "This operation is not supported!", sockfd);
+                    break;
                 }
-                
-             
         } else {
                 fprintf(stdout, "No message in five seconds.\n"); 
                 fflush(stdout);
@@ -190,7 +209,23 @@ void error(int errorCode, const char *errorMsg, int sockfd){
                        (socklen_t) sizeof(client));
 }
 
+void sendPacket(int opCode, int blockNO, int sockfd, char *data){
+    int n = 4 + strlen(data);
+    char msg[n];
+    msg[0] = 0;
+    msg[1] = opCode;
+    msg[2] = 0;
+    msg[3] = blockNO;
+    int i;
+    for(i = 4; i < n; i++){
+        msg[i] = data[i - 4];
+    }
 
+    /* Send the message. */
+    sendto(sockfd, msg, (size_t) n, 0,
+           (struct sockaddr *) &client,
+           (socklen_t) sizeof(client));
+               
 
-
+}
 
