@@ -110,64 +110,48 @@ int main(int argc, char **argv){
                 //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
-                    printf("into the void\n");
-                    fflush(stdout);
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
                     if((fd = fopen(file_path, "r")) == NULL){
                         error(0, "File not there.", sockfd);
-                        break;
+                        perror("open()");
+                        exit(0);
                     }else{
-                        int tries = 0;
-                        OP = 0;
-                        int packetNO = 1;
+                        int tries = 0, sz;
+                        int packetNO = 1, awkPno = 0;
                         char data[512];
 
-                        //fill buffer from file, if not full = last message
-                        while(fread(data, 1, 512, fd) == 512){
-                            
+                        sz = fread(data, 1, 512, fd);
+                        do{
                             sendPacket(3, packetNO, sockfd, data);
-                            //implement a timeout function that waits 15 seconds for a reply
-                            while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0 ){
+                            while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0){
                                 sendPacket(3, packetNO, sockfd, data);
-                                if(tries == 3){
+                                if(tries == 10){
                                     error(0, "Connection tiemout.", sockfd);
-                                    break;
+                                    exit(0);
                                 }
                                 tries++;
                             }
-                            tries = 0;
-                            
-                            //read reply message from client, if not awk then error
                             recvfrom(sockfd, message,
                                  sizeof(message) - 1, 0,
                                  (struct sockaddr *) &client,
                                  &len);
 
-                            if(message[1] != 4){
-                                error(0, "Unexpected message recieved.", sockfd);
-                                break;
+                            awkPno = message[3];
+                            if(awkPno == packetNO){
+                                packetNO++;
+                                sz = fread(data, 1, 512, fd);
                             }
-                            OP = message[3];
-                            packetNO++;
-                        }
-                        printf("inside the void\n");
-                            fflush(stdout);
-
-                        sendPacket(3, packetNO, sockfd, message);
-                        //implement a timeout function to allow for 3 retires on sending the last packet
-                        while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0 ){
-                                sendPacket(3, packetNO, sockfd, data);
-                                tries++;
-                            }
-                        tries = 0;
+                        }while(sz > 0);
+                        shutdown(sockfd, SHUT_WR);
+                        fclose(fd);
+                        //close(sockfd);
                     } 
-
                 } else{
                     // reject request
                     error(0, "This operation is not supported!", sockfd);
-                    break;
+                    exit(0);
                 }
         } else {
                 fprintf(stdout, "No message in five seconds.\n"); 
