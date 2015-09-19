@@ -19,6 +19,7 @@ void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 void error(int errorCode, const char *Errormsg, int sockfd);
 void sendPacket(int opCode, int blockNO, int sockfd, char *data);
+
 union { unsigned short blocknumber; char bytes[2]; } temp;
 
 //global variables
@@ -82,7 +83,7 @@ int main(int argc, char **argv){
         FD_SET(sockfd, &rfds);
 
         /* Set socket to wait for five seconds. */
-        tv.tv_sec = 5;
+        tv.tv_sec = 10;
         tv.tv_usec = 0;
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
@@ -96,20 +97,15 @@ int main(int argc, char **argv){
                 /* Receive one byte less than declared,
                    because it will be zero-termianted
                    below. */
-
-                ssize_t n = recvfrom(sockfd, message,
-                                     sizeof(message) - 1, 0,
-                                     (struct sockaddr *) &client,
-                                     &len);
-
-                 /* Zero terminate the message, otherwise
-                   printf may access memory outside of the
-                   string. */
-                message[n] = '\0';
+                recvfrom(sockfd, message,
+                             sizeof(message) - 1, 0,
+                             (struct sockaddr *) &client,
+                             &len);
 
                 //////////////////////////////////////////
                 /************ extracting mode ***********/
-                //////////////////////////////////////////
+                /////////////////////////////////////////
+                /*
                 int i;
                 char *mode;
                 for(i = 2; i < (int)sizeof(message); i++){
@@ -119,55 +115,65 @@ int main(int argc, char **argv){
                     }
                 }
                 printf(">>>>>>>> %s\n", mode);
-                exit(0);
-                //////////////////////////////////////////
-
+                */
+               //////////////////////////////////////////
 
                 //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
+                    printf("file %s requested by (ipaddress):(port number)\n", &message[2]);
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
                     if((fd = fopen(file_path, "rb")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
-                        exit(0);
+                        //exit(0);
                     }else{
-                        int tries = 0, sz;
-                        int packetNO = 1, awkPno = 0;
+                        int tries = 0, sz, n;
+                        unsigned int packetNO = 1;
                         char data[512];
 
-                        sz = fread(data, 1, 512, fd);
+                        sz = fread(data, 512, 8, fd);
                         do{
+                            printf("sz: %d\n", sz);
                             if(sz < 512){
-                                char buf[sz];
+                                char buf[sz+1];
+                                memset(buf, 0, sizeof(buf));
                                 strncpy(buf, data, sz);
                                 sendPacket(3, packetNO, sockfd, buf);
                             }else{
                                 sendPacket(3, packetNO, sockfd, data);    
                             }
-                            
-                            while(select(sockfd + 1, &rfds, NULL, NULL, &tv) == 0){
+
+                            if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
+                                    perror("select()");
+                                }
+                            while(n == 0){
                                 sendPacket(3, packetNO, sockfd, data);
                                 if(tries == 10){
                                     error(0, "Connection tiemout.", sockfd);
-                                    exit(0);
+                                    //restart server
                                 }
                                 tries++;
+                                if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
+                                    perror("select()");
+                                }
                             }
-                            tries = 0; 
+                            tries = 0;
+
                             recvfrom(sockfd, message,
                                  sizeof(message) - 1, 0,
                                  (struct sockaddr *) &client,
                                  &len);
 
-                            awkPno = message[3];
-                            if(awkPno == packetNO){
+                            temp.bytes[0] = message[3];
+                            temp.bytes[1] = message[2];
+                          
+                            if(temp.blocknumber == packetNO){
                                 packetNO++;
-                                sz = fread(data, 1, 512, fd);
-                            }
-                            
+                                sz = fread(data, 512, 8, fd);
+                            } 
                         }while(sz > 0);
                         //sendPacket(3, packetNO, sockfd, data);
                         shutdown(sockfd, SHUT_WR);
@@ -177,7 +183,7 @@ int main(int argc, char **argv){
                 } else{
                     // reject request
                     error(0, "This operation is not supported!", sockfd);
-                    exit(0);
+                    //exit(0);
                 }
         } else {
                 fprintf(stdout, "No message in five seconds.\n"); 
@@ -192,8 +198,8 @@ void checkDir(DIR *dir, char *folder){
         perror("opendir()");
         exit(0);
     }else{
-        printf("Folder %s available.\n", folder);
-        fflush(stdout);
+        /*printf("Folder %s available.\n", folder);
+        fflush(stdout);*/
         if(closedir(dir) != 0){
             perror("closedir()");
             exit(0);
@@ -205,8 +211,8 @@ void buildPath(char *folder, char *message){
     strcpy(file_path, folder);
     strcat(file_path, "/");
     strcat(file_path, &message[2]);
-    printf("file path: %s\n", file_path);
-    fflush(stdout);
+    /*printf("file path: %s\n", file_path);
+    fflush(stdout);*/
 }
 
 void error(int errorCode, const char *errorMsg, int sockfd){
@@ -232,6 +238,10 @@ void error(int errorCode, const char *errorMsg, int sockfd){
 }
 
 void sendPacket(int opCode, int blockNO, int sockfd, char *data){
+    printf("size: %d\n", strlen(data));
+    fflush(stdout);
+    printf("%s\n", &data[0]);
+    exit(0);
     int n = 4 + strlen(data);
     char msg[n];
     temp.blocknumber = htons(blockNO);
@@ -248,7 +258,4 @@ void sendPacket(int opCode, int blockNO, int sockfd, char *data){
     sendto(sockfd, msg, (size_t) n, 0,
            (struct sockaddr *) &client,
            (socklen_t) sizeof(client));
-               
-
 }
-
