@@ -43,9 +43,7 @@ int main(int argc, char **argv)
                 /* Wait for five seconds. */
                 tv.tv_sec = 5;
                 tv.tv_usec = 0;
-                retval = select(sockfd + 1, &rfds, NULL, NULL, &tv);
-
-                if (retval == -1) {
+                if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv) == -1){
                         perror("select()");
                 } else if (retval > 0) {
                         /* Data is available, receive it. */

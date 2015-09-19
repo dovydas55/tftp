@@ -114,15 +114,9 @@ int main(int argc, char **argv){
                         break; 
                     }
                 }
-<<<<<<< HEAD
                 printf(">>>>>>>> %s\n", mode);
                 */
                //////////////////////////////////////////
-=======
-                //printf(">>>>>>>> %s\n", mode);
-                //////////////////////////////////////////
-
->>>>>>> origin/master
 
                 //check OP code, only allow get
                 int OP = message[1];
@@ -140,7 +134,7 @@ int main(int argc, char **argv){
                         unsigned int packetNO = 1;
                         char data[512];
 
-                        sz = fread(data, 512, 8, fd);
+                        sz = fread(data, 1, 512, fd);
                         do{
                             printf("sz: %d\n", sz);
                             if(sz < 512){
@@ -178,7 +172,7 @@ int main(int argc, char **argv){
                           
                             if(temp.blocknumber == packetNO){
                                 packetNO++;
-                                sz = fread(data, 512, 8, fd);
+                                sz = fread(data, 1, 512, fd);
                             } 
                         }while(sz > 0);
                         //sendPacket(3, packetNO, sockfd, data);
@@ -247,7 +241,6 @@ void sendPacket(int opCode, int blockNO, int sockfd, char *data){
     printf("size: %d\n", strlen(data));
     fflush(stdout);
     printf("%s\n", &data[0]);
-    exit(0);
     int n = 4 + strlen(data);
     char msg[n];
     temp.blocknumber = htons(blockNO);
