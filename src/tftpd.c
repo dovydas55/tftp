@@ -114,9 +114,15 @@ int main(int argc, char **argv){
                         break; 
                     }
                 }
+<<<<<<< HEAD
                 printf(">>>>>>>> %s\n", mode);
                 */
                //////////////////////////////////////////
+=======
+                //printf(">>>>>>>> %s\n", mode);
+                //////////////////////////////////////////
+
+>>>>>>> origin/master
 
                 //check OP code, only allow get
                 int OP = message[1];
@@ -125,7 +131,7 @@ int main(int argc, char **argv){
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
-                    if((fd = fopen(file_path, "rb")) == NULL){
+                    if((fd = fopen(file_path, "r")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
                         //exit(0);
