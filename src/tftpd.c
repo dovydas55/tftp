@@ -80,75 +80,11 @@ int main(int argc, char **argv){
         FD_SET(sockfd, &rfds);
 
         /* Set socket to wait for five seconds. */
-        tv.tv_sec = 10;
+        tv.tv_sec = 5;
         tv.tv_usec = 0;
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
         } else if (retval > 0) {
-<<<<<<< HEAD
-
-                /* Data is available, receive it. */
-                assert(FD_ISSET(sockfd, &rfds));
-                
-                /* Copy to len, since recvfrom may change it. */
-                socklen_t len = (socklen_t) sizeof(client);
-                /* Receive one byte less than declared,
-                   because it will be zero-termianted
-                   below. */
-                recvfrom(sockfd, message,
-                             sizeof(message) - 1, 0,
-                             (struct sockaddr *) &client,
-                             &len);
-
-                //////////////////////////////////////////
-                /************ extracting mode ***********/
-                /////////////////////////////////////////
-                /*
-                int i;
-                char *mode;
-                for(i = 2; i < (int)sizeof(message); i++){
-                    if(message[i] == 0){
-                        mode = &message[i + 1];
-                        break; 
-                    }
-                }
-                printf(">>>>>>>> %s\n", mode);
-                */
-               //////////////////////////////////////////
-
-                //check OP code, only allow get
-                int OP = message[1];
-                if(OP == 1){
-                    printf("file \"%s\" requested by %s:%d\n", &message[2], inet_ntoa(client.sin_addr), ntohs(client.sin_port));
-                    /*Build file path argument string and
-                        open file*/
-                    buildPath(folder, message);
-                    if((fd = fopen(file_path, "rb")) == NULL){
-                        error(0, "File not there.", sockfd);
-                        perror("open()");
-                    }else{
-                        int tries = 0, sz, n;
-                        unsigned int packetNO = 1;
-                        char data[512];
-
-                        sz = fread(data, 1, 512, fd);
-                        do{
-                          //handle last data packet
-                            /*
-                            if(sz < 512){
-                                char buf[sz+1];
-                                memset(buf, 0, sizeof(buf));
-                                int k;
-                                for(k = 0; k <= sz; k++){
-                                    buf[k] = data[k];
-                                }
-                                sendPacket(3, packetNO, sockfd, buf, sz);
-                            }else{
-                                sendPacket(3, packetNO, sockfd, data, sz);    
-                            }
-                            */
-                            sendPacket(3, packetNO, sockfd, data, sz);
-=======
             /* Data is available, receive it. */
             assert(FD_ISSET(sockfd, &rfds));
             
@@ -188,33 +124,9 @@ int main(int argc, char **argv){
                                 error(0, "Connection tiemout.", sockfd);
                             }
                             tries++;
->>>>>>> origin/master
                             if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                                 perror("select()");
                             }
-<<<<<<< HEAD
-                            tries = 0;
-
-                            recvfrom(sockfd, message,
-                                 sizeof(message) - 1, 0,
-                                 (struct sockaddr *) &client,
-                                 &len);
-
-                            temp.bytes[0] = message[3];
-                            temp.bytes[1] = message[2];
-                          
-                            if(temp.blocknumber == packetNO){
-                                packetNO++;
-                                sz = fread(data, 1, 512, fd);
-                            } 
-                        }while(sz > 0);
-                        //shutdown(sockfd, SHUT_WR);
-                        fclose(fd);
-                    } 
-                } else{
-                    // reject request
-                    error(0, "This operation is not supported!", sockfd);
-=======
                         }
                         tries = 0;
 
@@ -229,7 +141,6 @@ int main(int argc, char **argv){
                         } 
                     }while(sz > 0);
                     fclose(fd);
->>>>>>> origin/master
                 }
             }else{
                 if(OP == 2) {
