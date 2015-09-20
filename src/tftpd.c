@@ -141,7 +141,7 @@ int main(int argc, char **argv){
                                 char buf[sz+1];
                                 memset(buf, 0, sizeof(buf));
                                 strncpy(buf, data, sz);
-                                sendPacket(3, packetNO, sockfd, buf, sz);
+                                sendPacket(3, packetNO, sockfd, buf, sz + 1);
                             }else{
                                 sendPacket(3, packetNO, sockfd, data, sz);    
                             }
