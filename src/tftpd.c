@@ -121,14 +121,13 @@ int main(int argc, char **argv){
                 //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
-                    printf("file %s requested by (ipaddress):(port number)\n", &message[2]);
+                    printf("file %s requested by %s:%d\n", &message[2], inet_ntoa(client.sin_addr), ntohs(client.sin_port));
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
                     if((fd = fopen(file_path, "rb")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
-                        //exit(0);
                     }else{
                         int tries = 0, sz, n;
                         unsigned int packetNO = 1;
@@ -136,12 +135,16 @@ int main(int argc, char **argv){
 
                         sz = fread(data, 1, 512, fd);
                         do{
-                            printf("sz: %d\n", sz);
+                            //handle last data packet
                             if(sz < 512){
-                                char buf[sz+1];
-                                memset(buf, 0, sizeof(buf));
-                                strncpy(buf, data, sz);
-                                sendPacket(3, packetNO, sockfd, buf, sz + 1);
+                                char buf[sz + 1];
+                                int i = 0;
+                                while(i < sz){
+                                    buf[i] = data[i];
+                                    i++;
+                                }
+                                buf[i] = '\0';
+                                sendPacket(3, packetNO, sockfd, buf, sz);
                             }else{
                                 sendPacket(3, packetNO, sockfd, data, sz);    
                             }
@@ -175,15 +178,12 @@ int main(int argc, char **argv){
                                 sz = fread(data, 1, 512, fd);
                             } 
                         }while(sz > 0);
-                        //sendPacket(3, packetNO, sockfd, data);
                         shutdown(sockfd, SHUT_WR);
                         fclose(fd);
-                        //close(sockfd);
                     } 
                 } else{
                     // reject request
                     error(0, "This operation is not supported!", sockfd);
-                    //exit(0);
                 }
         } else {
                 fprintf(stdout, "No message in five seconds.\n"); 
@@ -198,8 +198,6 @@ void checkDir(DIR *dir, char *folder){
         perror("opendir()");
         exit(0);
     }else{
-        /*printf("Folder %s available.\n", folder);
-        fflush(stdout);*/
         if(closedir(dir) != 0){
             perror("closedir()");
             exit(0);
@@ -211,8 +209,6 @@ void buildPath(char *folder, char *message){
     strcpy(file_path, folder);
     strcat(file_path, "/");
     strcat(file_path, &message[2]);
-    /*printf("file path: %s\n", file_path);
-    fflush(stdout);*/
 }
 
 void error(int errorCode, const char *errorMsg, int sockfd){
@@ -238,9 +234,6 @@ void error(int errorCode, const char *errorMsg, int sockfd){
 }
 
 void sendPacket(int opCode, int blockNO, int sockfd, char *data, int size){
-    //printf("size: %d\n", strlen(data));
-    //fflush(stdout);
-    //printf("%s\n", &data[0]);
     int n = 4 + size;
     char msg[n];
     temp.blocknumber = htons(blockNO);
