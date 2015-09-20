@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 
 #include <dirent.h>
 #include <unistd.h>
