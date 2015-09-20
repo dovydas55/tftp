@@ -136,12 +136,17 @@ int main(int argc, char **argv){
 
                         sz = fread(data, 1, 512, fd);
                         do{
-                            printf("sz: %d\n", sz);
+                            //printf("sz: %d\n", sz);
                             if(sz < 512){
                                 char buf[sz+1];
                                 memset(buf, 0, sizeof(buf));
-                                strncpy(buf, data, sz);
-                                sendPacket(3, packetNO, sockfd, buf, sz + 1);
+                                //strncpy(buf, data, sz);
+                                int k;
+                                for(k = 0; k < sz + 1; k++){
+                                    buf[k] = data[k];
+                                }
+                                //buf[sz + 1] = '\0';
+                                sendPacket(3, packetNO, sockfd, buf, sz);
                             }else{
                                 sendPacket(3, packetNO, sockfd, data, sz);    
                             }
