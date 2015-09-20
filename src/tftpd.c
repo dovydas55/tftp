@@ -16,54 +16,50 @@
 #include <math.h>
 
 //User defined helper functions
+void printMsg(char *print);
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 void error(int errorCode, const char *Errormsg, int sockfd);
 void sendPacket(int opCode, int blockNO, int sockfd, char *data, int sizesz);
+int argCheck(int port_n, char *folder);
 
-union { unsigned short blocknumber; char bytes[2]; } temp;
+union { unsigned short blocknumber; char bytes[2]; } bit;
 
 //global variables
 char file_path[1];
 struct sockaddr_in server, client;
 
 int main(int argc, char **argv){
-    int port_n, sockfd;
+    int port_n = 0, sockfd;
     char *folder;
     DIR *dir = NULL;
     char message[512];
     FILE *fd;
-    
-    //Check if the number of arguments is correct
+    folder = malloc(sizeof(&argv[2][0]));
+    sscanf(&argv[1][0], "%d", &port_n);
+    sscanf(&argv[2][0], "%s", folder);
+
     if(argc != 3){
         //Later change this to present a menu asking for destination n' stuff
-        printf("Number of arguments incorrect.\n");
+        printMsg("Number of arguments incorrect.");
+        free(folder);
         return 0;
-    }else{
-        //need to think on how to defend agains buffer overflow
-        folder = malloc(sizeof(&argv[2][0]));
-        if(!sscanf(&argv[1][0], "%d", &port_n)){
-            printf("Argument 1 not an integer.\n");
-            return 0;
-        }
-        else if(!sscanf(&argv[2][0], "%s", folder)){
-            printf("Argument 2 not a string.\n");
-            return 0;
-        }
+    } else if(!argCheck(port_n, folder)){
+        free(folder);
+        return 0;
     }
 
     //Check if directory is available to server
     checkDir(dir, folder);
-    /* Create and bind a UDP socket */
-    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){ /* SOCK_DGRAM  = using UDP */
+    /* Create and bind a UDP socket = SOCK_DGRAM  */
+    if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0){ 
         perror("cannot create socket");
         return 0;
     }
 
     memset(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
-    /* Network functions need arguments in network byte order instead of
-       host byte order. The macros htonl, htons convert the values, */
+    /* Network functions need arguments in network byte order instead of host byte order. The macros htonl, htons convert the values, */
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(port_n);
 
@@ -89,6 +85,7 @@ int main(int argc, char **argv){
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
         } else if (retval > 0) {
+<<<<<<< HEAD
 
                 /* Data is available, receive it. */
                 assert(FD_ISSET(sockfd, &rfds));
@@ -151,20 +148,51 @@ int main(int argc, char **argv){
                             }
                             */
                             sendPacket(3, packetNO, sockfd, data, sz);
-                            if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
-                                    perror("select()");
-                                }
-                            while(n == 0){
-                                sendPacket(3, packetNO, sockfd, data, sz);
-                                if(tries == 10){
-                                    error(0, "Connection tiemout.", sockfd);
-                                    //restart server
-                                }
-                                tries++;
-                                if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
-                                    perror("select()");
-                                }
+=======
+            /* Data is available, receive it. */
+            assert(FD_ISSET(sockfd, &rfds));
+            
+            /* Copy to len, since recvfrom may change it. */
+            socklen_t len = (socklen_t) sizeof(client);
+            /* Receive one byte less than declared, because it will be zero-termianted below. */
+            recvfrom(sockfd, message,
+                         sizeof(message) - 1, 0,
+                         (struct sockaddr *) &client,
+                         &len);
+            /* check OP code, only allow get */
+            int OP = message[1];
+            //if( mode == ascii or binary)
+            if(OP == 1){
+                printf("file %s requested by %s:%d\n", &message[2], inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+                /*Build file path argument string and open file*/
+                buildPath(folder, message);
+                if((fd = fopen(file_path, "rb")) == NULL){
+                    error(1, "File not found.", sockfd);
+                    perror("open()");
+                }else{
+                    int tries = 0, sz, n;
+                    unsigned int packetNO = 1;
+                    char data[512];
+
+                    sz = fread(data, 1, 512, fd);
+                    do{
+                        sendPacket(3, packetNO, sockfd, data, sz);    
+                        
+                        if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
+                            perror("select()");
+                        }
+
+                        while(n == 0){
+                            sendPacket(3, packetNO, sockfd, data, sz);
+                            if(tries == 10){
+                                error(0, "Connection tiemout.", sockfd);
                             }
+                            tries++;
+>>>>>>> origin/master
+                            if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
+                                perror("select()");
+                            }
+<<<<<<< HEAD
                             tries = 0;
 
                             recvfrom(sockfd, message,
@@ -186,13 +214,39 @@ int main(int argc, char **argv){
                 } else{
                     // reject request
                     error(0, "This operation is not supported!", sockfd);
+=======
+                        }
+                        tries = 0;
+
+                        recvfrom(sockfd, message, sizeof(message) - 1, 0, (struct sockaddr *) &client, &len);
+
+                        bit.bytes[0] = message[3];
+                        bit.bytes[1] = message[2];
+                      
+                        if(bit.blocknumber == packetNO){
+                            packetNO++;
+                            sz = fread(data, 1, 512, fd);
+                        } 
+                    }while(sz > 0);
+                    fclose(fd);
+>>>>>>> origin/master
                 }
+            }else{
+                if(OP == 2) {
+                    error(0, "This operation is not supported!", sockfd);
+                } else {
+                    error(4, "Illegal TFTP operation.!", sockfd);
+                }            
+            }
         } else {
-                fprintf(stdout, "No message in five seconds.\n"); 
-                fflush(stdout);
+            printMsg("No message in five seconds."); 
         }
     }
     return 0;
+}
+void printMsg(char *print){
+    fprintf(stdout, "%s\n", print);
+    fflush(stdout);
 }
 
 void checkDir(DIR *dir, char *folder){
@@ -226,30 +280,39 @@ void error(int errorCode, const char *errorMsg, int sockfd){
     }
     msg[n] = '\0'; 
 
-
     printf("%s\n", &msg[0]);
     fflush(stdout);   
         
-    sendto(sockfd, msg, (size_t) n, 0,
-                       (struct sockaddr *) &client,
-                       (socklen_t) sizeof(client));
+    sendto(sockfd, msg, (size_t) n, 0, (struct sockaddr *) &client, (socklen_t) sizeof(client));
 }
 
 void sendPacket(int opCode, int blockNO, int sockfd, char *data, int size){
     int n = 4 + size;
     char msg[n];
-    temp.blocknumber = htons(blockNO);
+    bit.blocknumber = htons(blockNO);
     msg[0] = 0;
     msg[1] = opCode;
-    msg[2] = temp.bytes[0];
-    msg[3] = temp.bytes[1];
+    msg[2] = bit.bytes[0];
+    msg[3] = bit.bytes[1];
+
     int i;
     for(i = 4; i < n; i++){
         msg[i] = data[i - 4];
-    }
-
+    } 
+    
     /* Send the message. */
-    sendto(sockfd, msg, (size_t) n, 0,
-           (struct sockaddr *) &client,
-           (socklen_t) sizeof(client));
+    sendto(sockfd, msg, (size_t) n, 0, (struct sockaddr *) &client, (socklen_t) sizeof(client));
+}
+
+int argCheck(int port_n, char *folder) {
+
+    if(!port_n){
+        printMsg("Argument 1 not an integer");
+        return 0;
+    } /* LOL */
+    else if(sizeof(folder) > 255){ 
+        printMsg("Access violation.");
+        return 0;
+    } 
+    return 1;
 }
