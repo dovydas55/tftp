@@ -18,7 +18,7 @@
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
 void error(int errorCode, const char *Errormsg, int sockfd);
-void sendPacket(int opCode, int blockNO, int sockfd, char *data);
+void sendPacket(int opCode, int blockNO, int sockfd, char *data, int sizesz);
 
 union { unsigned short blocknumber; char bytes[2]; } temp;
 
@@ -125,7 +125,7 @@ int main(int argc, char **argv){
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
-                    if((fd = fopen(file_path, "r")) == NULL){
+                    if((fd = fopen(file_path, "rb")) == NULL){
                         error(0, "File not there.", sockfd);
                         perror("open()");
                         //exit(0);
@@ -141,16 +141,16 @@ int main(int argc, char **argv){
                                 char buf[sz+1];
                                 memset(buf, 0, sizeof(buf));
                                 strncpy(buf, data, sz);
-                                sendPacket(3, packetNO, sockfd, buf);
+                                sendPacket(3, packetNO, sockfd, buf, sz);
                             }else{
-                                sendPacket(3, packetNO, sockfd, data);    
+                                sendPacket(3, packetNO, sockfd, data, sz);    
                             }
 
                             if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                                     perror("select()");
                                 }
                             while(n == 0){
-                                sendPacket(3, packetNO, sockfd, data);
+                                sendPacket(3, packetNO, sockfd, data, sz);
                                 if(tries == 10){
                                     error(0, "Connection tiemout.", sockfd);
                                     //restart server
@@ -237,11 +237,11 @@ void error(int errorCode, const char *errorMsg, int sockfd){
                        (socklen_t) sizeof(client));
 }
 
-void sendPacket(int opCode, int blockNO, int sockfd, char *data){
-    printf("size: %d\n", strlen(data));
-    fflush(stdout);
-    printf("%s\n", &data[0]);
-    int n = 4 + strlen(data);
+void sendPacket(int opCode, int blockNO, int sockfd, char *data, int size){
+    //printf("size: %d\n", strlen(data));
+    //fflush(stdout);
+    //printf("%s\n", &data[0]);
+    int n = 4 + size;
     char msg[n];
     temp.blocknumber = htons(blockNO);
     msg[0] = 0;
