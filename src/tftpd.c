@@ -49,8 +49,6 @@ int main(int argc, char **argv){
         return 0;
     }
 
-
-
     //Check if directory is available to server
     checkDir(dir, folder);
     /* Create and bind a UDP socket = SOCK_DGRAM  */
@@ -87,7 +85,6 @@ int main(int argc, char **argv){
         if((retval = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                 perror("select()");
         } else if (retval > 0) {
-
             /* Data is available, receive it. */
             assert(FD_ISSET(sockfd, &rfds));
             
