@@ -122,7 +122,7 @@ int main(int argc, char **argv){
                 //check OP code, only allow get
                 int OP = message[1];
                 if(OP == 1){
-                    printf("file %s requested by %s:%d\n", &message[2], inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+                    printf("file \"%s\" requested by %s:%d\n", &message[2], inet_ntoa(client.sin_addr), ntohs(client.sin_port));
                     /*Build file path argument string and
                         open file*/
                     buildPath(folder, message);
@@ -137,6 +137,7 @@ int main(int argc, char **argv){
                         sz = fread(data, 1, 512, fd);
                         do{
                           //handle last data packet
+                            /*
                             if(sz < 512){
                                 char buf[sz+1];
                                 memset(buf, 0, sizeof(buf));
@@ -148,7 +149,8 @@ int main(int argc, char **argv){
                             }else{
                                 sendPacket(3, packetNO, sockfd, data, sz);    
                             }
-
+                            */
+                            sendPacket(3, packetNO, sockfd, data, sz);
                             if((n = select(sockfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                                     perror("select()");
                                 }
@@ -178,7 +180,7 @@ int main(int argc, char **argv){
                                 sz = fread(data, 1, 512, fd);
                             } 
                         }while(sz > 0);
-                        shutdown(sockfd, SHUT_WR);
+                        //shutdown(sockfd, SHUT_WR);
                         fclose(fd);
                     } 
                 } else{
