@@ -140,7 +140,6 @@ int main(int argc, char **argv){
                             if(sz < 512){
                                 char buf[sz+1];
                                 memset(buf, 0, sizeof(buf));
-                                //strncpy(buf, data, sz);
                                 int k;
                                 for(k = 0; k <= sz; k++){
                                     buf[k] = data[k];

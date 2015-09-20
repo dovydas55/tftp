@@ -18,21 +18,19 @@
 //User defined helper functions
 void checkDir(DIR *dir, char *folder);
 void buildPath(char *folder, char *message);
-void error(int errorCode, const char *Errormsg, int sockfd, struct sockaddr_in client);
-void sendPacket(int opCode, int blockNO, int sockfd, char *data, struct sockaddr_in cient);
+void error(int errorCode, const char *Errormsg, int sockfd);
+void sendPacket(int opCode, int blockNO, int sockfd, char *data, int sizesz);
 
 union { unsigned short blocknumber; char bytes[2]; } temp;
 
 //global variables
 char file_path[1];
- 
-
+struct sockaddr_in server, client;
 
 int main(int argc, char **argv){
-    int port_n, sockfd, pid, x = 0;
+    int port_n, sockfd;
     char *folder;
-    struct sockaddr_in server;
-    DIR *dir = NULL;    
+    DIR *dir = NULL;
     
     //Check if the number of arguments is correct
     if(argc != 3){
@@ -72,14 +70,13 @@ int main(int argc, char **argv){
         return 0;
     }
 
-    
-
     printf("Server is ready and listening on port %d\n", ntohs(server.sin_port));
     fflush(stdout);
+
     while(1){
         fd_set rfds;
         struct timeval tv;
-        int retval;
+        int retval, pid;
 
         /* Check whether there is data on the socket fd. */
         FD_ZERO(&rfds);
@@ -95,9 +92,6 @@ int main(int argc, char **argv){
             //while parent listens for more requests
             pid = fork();
             if(pid == 0){
-                x++;
-                printf("%d\n", x);
-                fflush(stdout);
                 //variables that each child has to have for itself
                 struct sockaddr_in client;
                 char message[512];
@@ -115,6 +109,8 @@ int main(int argc, char **argv){
                     perror("accept");
                     exit(0);
                 }
+
+                close(sockfd); // child doesn't need the listener
 
                 /* Receive one byte less than declared,
                    because it will be zero-termianted
@@ -150,7 +146,7 @@ int main(int argc, char **argv){
                             open file*/
                         buildPath(folder, message);
                         if((fd = fopen(file_path, "r")) == NULL){
-                            error(0, "File not there.", childSocketfd, client);
+                            error(0, "File not there.", childSocketfd);
                             perror("open()");
                             exit(0);
                         }else{
@@ -160,25 +156,28 @@ int main(int argc, char **argv){
 
                             sz = fread(data, 1, 512, fd);
                             do{
-                                if(sz < 512){
+                                if(sz < 512){   //handle last data packet
                                     char buf[sz + 1];
                                     memset(buf, 0, sizeof(buf));
-                                    strncpy(buf, data, sz);
-                                    sendPacket(3, packetNO, childSocketfd, buf, client, sz + 1);
+                                    int k;
+                                for(k = 0; k <= sz; k++){
+                                    buf[k] = data[k];
+                                }
+                                    sendPacket(3, packetNO, childSocketfd, buf, sz);
                                 }else{
-                                    sendPacket(3, packetNO, childSocketfd, data, client, sz);    
+                                    sendPacket(3, packetNO, childSocketfd, data, sz);    
                                 }
 
                                 if((n = select(childSocketfd + 1, &rfds, NULL, NULL, &tv)) == -1){
                                         perror("select()");
-                                        shutdown(sockfd, SHUT_WR);
+                                        shutdown(childSocketfd, SHUT_WR);
                                         fclose(fd);
                                         exit(0);
                                     }
                                 while(n == 0){
-                                    sendPacket(3, packetNO, childSocketfd, data, client);
+                                    sendPacket(3, packetNO, childSocketfd, data, sz);
                                     if(tries == 10){
-                                        error(0, "Connection tiemout.", childSocketfd, client);
+                                        error(0, "Connection tiemout.", childSocketfd);
                                         shutdown(childSocketfd, SHUT_WR);
                                         fclose(fd);
                                         exit(0);
@@ -212,13 +211,13 @@ int main(int argc, char **argv){
                    
                 } else{
                     // reject request
-                    error(0, "This operation is not supported!", childSocketfd, client);
+                    error(0, "This operation is not supported!", childSocketfd);
                     exit(0);
                 }
             }
         } else if (pid > 0){
             //parent procces
-            sleep(20);
+            //sleep(20);
             fprintf(stdout, "Server is listening.\n"); 
             fflush(stdout);
         }else{
@@ -250,7 +249,7 @@ void buildPath(char *folder, char *message){
     fflush(stdout);*/
 }
 
-void error(int errorCode, const char *errorMsg, int sockfd, struct sockaddr_in client){
+void error(int errorCode, const char *errorMsg, int sockfd){
     int n = 16 + strlen(errorMsg);
     char msg[n];
     msg[0] = 0;
@@ -272,7 +271,7 @@ void error(int errorCode, const char *errorMsg, int sockfd, struct sockaddr_in c
                        (socklen_t) sizeof(client));
 }
 
-void sendPacket(int opCode, int blockNO, int sockfd, char *data, struct sockaddr_in client, int sz){
+void sendPacket(int opCode, int blockNO, int sockfd, char *data, int sz){
     int n = 4 + sz;
     char msg[n];
     temp.blocknumber = htons(blockNO);
