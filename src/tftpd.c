@@ -240,7 +240,7 @@ void buildPath(char *folder, char *message){
     strcat(file_path, "/");
     strcat(file_path, &message[2]);
 }
-/* Function to send packet's, simpler for code and cleaner */
+/* Function to send packets, simpler for code and cleaner */
 void sendPacket(int opCode, int blockNO, int sockfd, char *data, int size){
     int n = 4 + size;
     char msg[n];
@@ -258,7 +258,7 @@ void sendPacket(int opCode, int blockNO, int sockfd, char *data, int size){
     /* Send the message. */
     sendto(sockfd, msg, (size_t) n, 0, (struct sockaddr *) &client, (socklen_t) sizeof(client));
 }
-/* Function to check if arguments are valid and right retrns value 0 = false, 1 = true */
+/* Function to check if arguments are valid and right returns value 0 = false, 1 = true */
 int argCheck(int port_n, char *folder) {
 
     if(!port_n){
