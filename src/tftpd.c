@@ -135,15 +135,15 @@ int main(int argc, char **argv){
 
                         sz = fread(data, 1, 512, fd);
                         do{
-                            //handle last data packet
+                          //handle last data packet
                             if(sz < 512){
-                                char buf[sz + 1];
-                                int i = 0;
-                                while(i < sz){
-                                    buf[i] = data[i];
-                                    i++;
+                                char buf[sz+1];
+                                memset(buf, 0, sizeof(buf));
+                                //strncpy(buf, data, sz);
+                                int k;
+                                for(k = 0; k <= sz; k++){
+                                    buf[k] = data[k];
                                 }
-                                buf[i] = '\0';
                                 sendPacket(3, packetNO, sockfd, buf, sz);
                             }else{
                                 sendPacket(3, packetNO, sockfd, data, sz);    
