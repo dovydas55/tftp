@@ -204,7 +204,7 @@ int main(int argc, char **argv){
                                     sz = fread(data, 1, 512, fd);
                                 } 
                             }while(sz > 0);
-                            shutdown(childSocketfd, SHUT_WR);
+                            //shutdown(childSocketfd, SHUT_WR);
                             fclose(fd);
                             exit(0);
                         }
